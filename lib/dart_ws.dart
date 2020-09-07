@@ -24,16 +24,19 @@ Future run() async {
   }
 }
 
+void handleSocket(data, socket) {
+  print('hello');
+  socket.add('echo ${data.toString()}');
+  Timer(Duration(seconds: 1), () {
+    print('timer ${DateTime.now().toString()}');
+    socket.add('1s timer');
+  });
+}
+
 void handleRequest(HttpRequest request, host) async {
   if (request.uri.path == '/ws') {
     var socket = await WebSocketTransformer.upgrade(request);
-    socket.listen((data) {
-      print('hello');
-      Timer(Duration(seconds: 1), () {
-        print('timer ${DateTime.now().toString()}');
-        socket.add('Hello, World!');
-      });
-    });
+    socket.listen((data) => handleSocket(data, socket));
   } else {
     try {
       if (request.method == 'GET') {
