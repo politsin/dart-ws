@@ -1,56 +1,19 @@
 import 'dart:io';
 import 'dart:convert';
-import 'dart:typed_data';
-import 'dart:math' show Random;
+// import 'dart:typed_data';
+// import "dart:isolate";
+// import 'dart:math' show Random;
 import 'dart:async' show Timer;
 
-Future main() async {
+Future run() async {
   Stream<HttpRequest> server;
   final port = 4044;
   final host = InternetAddress.loopbackIPv4;
-  // WS
-  final ws = await ServerSocket.bind('127.0.0.1', 5600);
-  print('Listening on ws://127.0.0.1:5600');
-  ws.listen((Socket socket) {
-    print('Got connected ${socket.remoteAddress}');
-    print('\t\thello'); // client will send JSON data
-    Timer(Duration(seconds: 1), () {
-      print("timer ${DateTime.now().toString()}");
-    });
-    for (int i = 0; i < 5; i++) {
-      // socket.add(new Uint64List.fromList([i]).buffer.asUint8List());
-    }
-    print('Closed ${socket.remoteAddress}');
-    // socket.close();
-  });
-  // final serverSocket = await ServerSocket.bind('127.0.0.1', 5600);
-  // await for (Socket socket in serverSocket) {
-  //   server.listen((Socket socket) {
-  //     print('Got connected ${socket.remoteAddress}');
-
-  //     for (int i = 0; i < 1024; i++) {
-  //       socket.add(new Uint64List.fromList([i]).buffer.asUint8List());
-  //     }
-  //     socket.close();
-  //     print('Closed ${socket.remoteAddress}');
-  //   });
-  //   // socket.listen(
-  //   //   dataHandler,
-  //   //   onError: errorHandler,
-  //   //   onDone: () => {socket.destroy()},
-  //   // );
-  //   // print('Got connected ${socket.remoteAddress}');
-  //   // for (int i = 0; i < 1024; i++) {
-  //   //   socket.add(new Uint64List.fromList([i]).buffer.asUint8List());
-  //   // }
-  //   // socket.close();
-  //   // stdin.listen(
-  //   //     (data) => socket.write(new String.fromCharCodes(data).trim() + '\n'));
-  // }
   // Http
   try {
     server = await HttpServer.bind(host, port);
     print('Listening on localhost:${port}');
+    print('Listening on ws://127.0.0.1:${port}/ws');
   } catch (e) {
     print("Couldn't bind to port ${port}: $e");
     exit(-1);
@@ -61,16 +24,32 @@ Future main() async {
   }
 }
 
-void dataHandler(data) {
-  print(new String.fromCharCodes(data).trim());
+void handleRequest(HttpRequest request, host) async {
+  if (request.uri.path == '/ws') {
+    var socket = await WebSocketTransformer.upgrade(request);
+    socket.listen((data) {
+      print('hello');
+      Timer(Duration(seconds: 1), () {
+        print('timer ${DateTime.now().toString()}');
+        socket.add('Hello, World!');
+      });
+    });
+  } else {
+    try {
+      if (request.method == 'GET') {
+        handleGet(request, host);
+      } else {
+        request.response
+          ..statusCode = HttpStatus.methodNotAllowed
+          ..write('Unsupported request: ${request.method}.')
+          ..close();
+      }
+    } catch (e) {
+      print('Exception in handleRequest: $e');
+    }
+    print('Request handled.');
+  }
 }
-
-void errorHandler(error, StackTrace trace) {
-  print(error);
-}
-
-Random intGenerator = Random();
-int someRandomInt = intGenerator.nextInt(10);
 
 void handleGet(HttpRequest request, host) {
   final response = request.response;
@@ -96,20 +75,4 @@ void handleGet(HttpRequest request, host) {
       ..close();
   }
   response.close();
-}
-
-void handleRequest(HttpRequest request, host) {
-  try {
-    if (request.method == 'GET') {
-      handleGet(request, host);
-    } else {
-      request.response
-        ..statusCode = HttpStatus.methodNotAllowed
-        ..write('Unsupported request: ${request.method}.')
-        ..close();
-    }
-  } catch (e) {
-    print('Exception in handleRequest: $e');
-  }
-  print('Request handled.');
 }
