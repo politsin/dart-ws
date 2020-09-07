@@ -18,18 +18,18 @@ Future run() async {
     print("Couldn't bind to port ${port}: $e");
     exit(-1);
   }
-
   await for (HttpRequest request in server) {
     handleRequest(request, host);
   }
 }
 
 void handleSocket(data, socket) {
-  print('hello');
+  print('get MSG: ${data.toString()}');
   socket.add('echo ${data.toString()}');
   Timer(Duration(seconds: 1), () {
     print('timer ${DateTime.now().toString()}');
     socket.add('1s timer');
+    handleSocket(data, socket);
   });
 }
 
