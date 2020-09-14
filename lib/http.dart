@@ -7,7 +7,7 @@ void handleHttp(HttpRequest request, host) async {
       handleGet(request, host);
     } else {
       request.response
-        ..statusCode = HttpStatus.methodNotAllowed
+        ..statusCode = await HttpStatus.methodNotAllowed
         ..write('Unsupported request: ${request.method}.')
         ..close();
     }
